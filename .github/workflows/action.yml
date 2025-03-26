@@ -64,7 +64,7 @@ jobs:
       # Étape 10 : Vérifier l'état du déploiement
       - name: Verify Rollout Status
         run: |
-          kubectl rollout status deployment/mon-app-node
+          kubectl rollout status deployment/mon-app-deployment
 
       # Étape 11 : Vérifier les Pods déployés
       - name: Verify Deployed Pods
@@ -74,4 +74,4 @@ jobs:
       - name: Rollback on Failure
         if: failure()
         run: |
-          kubectl rollout undo deployment/mon-app-node
+          kubectl rollout undo deployment/mon-app-deployment
