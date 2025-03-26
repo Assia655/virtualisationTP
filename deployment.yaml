@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: mon-app
-          image: mon-app-node:latest
+          image: assiadoc/mon-app-node:latest
           imagePullPolicy: Never
            resources:
           requests:
