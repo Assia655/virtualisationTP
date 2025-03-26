@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 
 app.get('/', (req, res) => {
-    res.send('Bonjour depuis Kubernetes test de CI/CD pipline !');
+    res.send('Bonjour depuis Kubernetes test de CI/CD !');
 });
 
 app.listen(3000, () => {
