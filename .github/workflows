@@ -1,1 +1,36 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Étape 1 : Vérifier le code source du dépôt GitHub
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Étape 2 : Se connecter à Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Étape 3 : Construire l'image Docker
+      - name: Build Docker image
+        run: |
+          docker build -t mon-app-node .
+          docker tag mon-app-node ${{ secrets.DOCKER_USERNAME }}/mon-app-node:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/mon-app-node:latest
+
+      # Étape 4 : Déployer l'application sur Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
 
