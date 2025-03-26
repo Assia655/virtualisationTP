@@ -1,4 +1,4 @@
-name: Deploy to Kubernetes
+name: Deploy to Kubernetes with KinD
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  build:
+  build-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,22 +14,64 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Étape 2 : Se connecter à Docker Hub
+      # Étape 2 : Installer Docker
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      # Étape 3 : Installer KinD (Kubernetes in Docker)
+      - name: Install KinD
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.26.0/kind-linux-amd64
+          chmod +x ./kind
+          mv ./kind /usr/local/bin/kind
+
+      # Étape 4 : Créer un cluster KinD
+      - name: Create KinD Cluster
+        run: |
+          kind create cluster --name my-app-cluster
+
+      # Étape 5 : Vérifier que le cluster KinD fonctionne
+      - name: Validate Kubernetes Connection
+        run: |
+          kubectl cluster-info --context kind-my-app-cluster
+          kubectl get nodes
+
+      # Étape 6 : Se connecter à Docker Hub (si besoin pour pousser l'image)
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Étape 3 : Construire l'image Docker
-      - name: Build Docker image
+      # Étape 7 : Construire l'image Docker et la pousser vers Docker Hub
+      - name: Build and Push Docker image
         run: |
           docker build -t mon-app-node .
           docker tag mon-app-node ${{ secrets.DOCKER_USERNAME }}/mon-app-node:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/mon-app-node:latest
 
-      # Étape 4 : Déployer l'application sur Kubernetes
-      - name: Deploy to Kubernetes
+      # Étape 8 : Charger l'image Docker dans le cluster KinD
+      - name: Load Docker image into KinD
+        run: |
+          kind load docker-image ${{ secrets.DOCKER_USERNAME }}/mon-app-node:latest --name my-app-cluster
+
+      # Étape 9 : Déployer l'application sur le cluster KinD
+      - name: Deploy to KinD
         run: |
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
+
+      # Étape 10 : Vérifier l'état du déploiement
+      - name: Verify Rollout Status
+        run: |
+          kubectl rollout status deployment/mon-app-node
+
+      # Étape 11 : Vérifier les Pods déployés
+      - name: Verify Deployed Pods
+        run: kubectl get pods
+
+      # Étape 12 : Rollback automatique en cas d'échec
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/mon-app-node
